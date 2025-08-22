@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.kzneuro_wearos"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.kzneuro_wearos"
