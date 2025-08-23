@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -46,4 +47,19 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     wearApp(project(":wear"))
+    // Firebase Bill of Materials (BoM) - Manages versions for Firebase libraries
+    implementation(platform(libs.firebase.bom))
+
+    // Firebase Authentication
+    implementation(libs.firebase.auth)
+
+    // Google Sign-In for Android
+    implementation(libs.play.services.auth)
+
+    // Jetpack Compose Navigation for Wear OS
+    implementation(libs.androidx.compose.navigation)
+
+    // ViewModel for managing UI state
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
 }

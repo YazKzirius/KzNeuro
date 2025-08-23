@@ -76,18 +76,39 @@
 
         <!-- Get Started Button -->
         <!-- Note: Create a drawable resource 'get_started_button_background.xml' for the button's background with rounded corners and color. -->
-        <Button
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp"
-            android:backgroundTint="#1466b8"
-            android:text="Get Started"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="48dp"
+            android:background="@drawable/rounded_background"
+            android:paddingHorizontal="12dp">
+
+            <ImageView
+                android:id="@+id/google_icon2"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_google" />
+
+            <Button
+                android:id="@+id/Gsignin_btn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Get Started with Google"
+                android:backgroundTint="#49A4AF"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+        </LinearLayout>
+        <ProgressBar
+            android:id="@+id/loading_spinner"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:visibility="gone"
+            tools:visibility="visible"/>
 
         <!-- This View represents the empty div with a height at the bottom -->
         <View

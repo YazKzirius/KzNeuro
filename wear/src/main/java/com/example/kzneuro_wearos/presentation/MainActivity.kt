@@ -104,22 +104,38 @@ fun WearApp() {
 
             // Item 4: "Get Started" Button
             item {
-                // The standard Wear OS Button is full-width and has a recommended height.
+                // The entire element is one Button
                 Button(
-                    onClick = { /* Handle button click */ },
+                    onClick = { /* TODO: Handle Sign-In Click */ },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .height(56.dp), // A standard, accessible height
                     colors = ButtonDefaults.buttonColors(
-                        backgroundColor = Color(0xFF1466b8)
+                        backgroundColor = Color(0xFF49A4AF) // android:backgroundTint
                     )
                 ) {
-                    Text(
-                        text = "Get Started",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center // Center content within the button
+                    ) {
+                        // The Google Icon
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_google),
+                            contentDescription = "Google Icon",
+                            modifier = Modifier.size(24.dp) // A more standard icon size for buttons
+                        )
+
+                        // Spacer for visual separation
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // The text
+                        Text(
+                            text = "Get Started with Google",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
         }
