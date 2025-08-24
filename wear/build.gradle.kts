@@ -63,17 +63,18 @@ dependencies {
     debugImplementation(libs.androidx.tiles.tooling)
     wearApp(project(":wear"))
     // Firebase Bill of Materials (BoM) - Manages versions for Firebase libraries
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation(platform(libs.firebase.bom))
 
     // Firebase Authentication
-    implementation("com.google.firebase:firebase-auth")
+    implementation(libs.google.firebase.auth)
 
     // Google Sign-In for Android
-    implementation("com.google.android.gms:play-services-auth:21.2.0")
+    implementation(libs.play.services.auth)
 
     // Jetpack Compose Navigation for Wear OS
-    implementation("androidx.wear.compose:compose-navigation:1.3.1")
+    implementation(libs.androidx.compose.navigation.v131)
 
     // ViewModel for managing UI state
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
+    implementation(libs.androidx.lifecycle.viewmodel.compose.v281)
+    implementation(libs.play.services.wearable.v1820)
 }

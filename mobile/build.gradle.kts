@@ -61,5 +61,6 @@ dependencies {
 
     // ViewModel for managing UI state
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.play.services.wearable)
 
 }
