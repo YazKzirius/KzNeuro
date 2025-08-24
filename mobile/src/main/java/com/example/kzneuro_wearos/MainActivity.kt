@@ -114,6 +114,9 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         // If user is already signed in, go directly to HomeActivity
+        if (Firebase.auth.currentUser != null) {
+            navigateToHome()
+        }
     }
 
     private fun showLoading() {
