@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -24,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var authenticator: FirebaseAuthenticator
     private lateinit var signInButton: Button
     private lateinit var loadingSpinner: ProgressBar
+    private val watchViewModel: WatchViewModel by viewModels()
 
     // Modern way to handle activity results, replacing onActivityResult
     private val signInLauncher = registerForActivityResult(
@@ -93,8 +95,8 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, HomeActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
+        watchViewModel.navigateToHomeOnWatch()
         startActivity(intent)
         finish() // Call finish to remove MainActivity from the back stack
     }
-
 }
