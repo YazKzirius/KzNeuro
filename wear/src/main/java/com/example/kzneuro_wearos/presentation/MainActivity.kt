@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -38,10 +40,12 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import androidx.wear.tooling.preview.devices.WearDevices
-import com.example.kzneuro_wearos.OpenAppViewModel
+import com.example.kzneuro_wearos.SignInViewModel
 import com.example.kzneuro_wearos.PhoneAppState
 import com.example.kzneuro_wearos.R // Import your R file
 import com.example.kzneuro_wearos.presentation.theme.KzNeuroWearOsTheme // Import your theme
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,54 +66,63 @@ class MainActivity : ComponentActivity() {
 fun WearApp() {
     KzNeuroWearOsTheme {
         val navController = rememberSwipeDismissableNavController()
-        ListenForNavigationCommands(navController = navController)
 
-        // SwipeDismissableNavHost is the navigation container. It decides which
-        // screen to show based on the current "route".
+        // This composable will listen for the broadcast from our service
+        ListenForAuthResult(navController = navController)
+
+        // Robust Startup Check: Determine the starting screen based on login status.
+        val startDestination = if (Firebase.auth.currentUser != null) {
+            "home" // If user is already logged in, go straight to home
+        } else {
+            "welcome" // Otherwise, show the welcome/login screen
+        }
+
         SwipeDismissableNavHost(
             navController = navController,
-            startDestination = "welcome" // The app will start at the "welcome" route
+            startDestination = startDestination // Use the dynamic start destination
         ) {
-            // Define the "welcome" screen's content
             composable("welcome") {
                 WelcomeScreen(navController = navController)
             }
-
-            // Define the "home" screen's content
             composable("home") {
                 HomeScreen(navController = navController)
             }
         }
     }
 }
-// NEW COMPOSABLE TO HANDLE THE BROADCAST LISTENER
+/**
+ * A composable that registers a broadcast receiver to listen for the
+ * authentication result from our DataLayerListenerService.
+ */
 @Composable
-fun ListenForNavigationCommands(navController: NavHostController) {
+fun ListenForAuthResult(navController: NavHostController) {
     val context = LocalContext.current
+    val TAG = "AuthResultListener"
 
-    // DisposableEffect is used to register a listener when the composable
-    // enters the screen and unregister it when it leaves, preventing memory leaks.
+    // This effect runs once and sets up a listener that is cleaned up automatically.
     DisposableEffect(Unit) {
-        // 1. Create the BroadcastReceiver
-        val navigationReceiver = object : BroadcastReceiver() {
+        val authReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                // When the broadcast is received, navigate to the settings screen
-                if (intent?.action == "com.example.kzneuro_wearos.NAVIGATE_TO_HOME") {
-                    navController.navigate("home")
+                val success = intent?.getBooleanExtra("AUTH_SUCCESS", false) ?: false
+                Log.d(TAG, "Received broadcast! Success: $success")
+                if (success) {
+                    // Navigate to home and clear the welcome screen from history
+                    navController.navigate("home") {
+                        popUpTo("welcome") { inclusive = true }
+                    }
                 }
             }
         }
 
-        // 2. Register the receiver to listen for our specific action
         LocalBroadcastManager.getInstance(context).registerReceiver(
-            navigationReceiver,
-            IntentFilter("com.example.kzneuro_wearos.NAVIGATE_TO_HOME")
+            authReceiver,
+            IntentFilter("com.example.kzneuro_wearos.AUTH_RESULT")
         )
 
-        // 3. The onDispose block is called when the composable leaves the screen
+        // This block runs when the composable is removed from the screen
         onDispose {
-            // Unregister the receiver to prevent memory leaks
-            LocalBroadcastManager.getInstance(context).unregisterReceiver(navigationReceiver)
+            Log.d(TAG, "Disposing and unregistering broadcast receiver.")
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(authReceiver)
         }
     }
 }
@@ -120,8 +133,9 @@ fun ListenForNavigationCommands(navController: NavHostController) {
  */
 @Composable
 fun WelcomeScreen(navController: NavHostController) {
-    val openAppViewModel: OpenAppViewModel = viewModel()
-    val phoneState by openAppViewModel.phoneAppState.collectAsState()
+    val context = LocalContext.current
+    val signInViewModel: SignInViewModel = viewModel()
+    val phoneState by signInViewModel.phoneAppState.collectAsState()
     // The UI layout for the welcome screen
     ScalingLazyColumn(
         modifier = Modifier
@@ -168,7 +182,9 @@ fun WelcomeScreen(navController: NavHostController) {
             }
 
             Button(
-                onClick = { openAppViewModel.openAppOnPhone() },
+                onClick = { signInViewModel.startSignInOnPhone()
+                    Toast.makeText(context, buttonText, Toast.LENGTH_SHORT).show()
+                          },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

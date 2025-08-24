@@ -1,7 +1,5 @@
 package com.example.kzneuro_wearos
 
-
-
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -13,15 +11,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-// Sealed class to represent the UI state
+// The UI states remain the same
 sealed class PhoneAppState {
     object Idle : PhoneAppState()
     object Requesting : PhoneAppState()
-    object PhoneFound : PhoneAppState()
+    object PhoneFound : PhoneAppState() // We won't use this state directly anymore
     object PhoneNotFound : PhoneAppState()
 }
 
-class OpenAppViewModel(application: Application) : AndroidViewModel(application) {
+class SignInViewModel(application: Application) : AndroidViewModel(application) {
 
     private val capabilityClient: CapabilityClient = Wearable.getCapabilityClient(application)
     private val messageClient = Wearable.getMessageClient(application)
@@ -29,7 +27,10 @@ class OpenAppViewModel(application: Application) : AndroidViewModel(application)
     private val _phoneAppState = MutableStateFlow<PhoneAppState>(PhoneAppState.Idle)
     val phoneAppState: StateFlow<PhoneAppState> = _phoneAppState
 
-    fun openAppOnPhone() {
+    /**
+     * Sends a message to the phone asking it to start the Google Sign-In flow.
+     */
+    fun startSignInOnPhone() {
         viewModelScope.launch {
             _phoneAppState.value = PhoneAppState.Requesting
             try {
@@ -39,16 +40,17 @@ class OpenAppViewModel(application: Application) : AndroidViewModel(application)
                 val phoneNode = capabilityInfo.nodes.firstOrNull()
 
                 if (phoneNode != null) {
-                    messageClient.sendMessage(phoneNode.id, "/open_mobile_app", byteArrayOf())
+                    // Send the specific "start sign-in" message
+                    messageClient.sendMessage(phoneNode.id, "/start-sign-in", byteArrayOf())
                         .await()
-                    _phoneAppState.value = PhoneAppState.PhoneFound
-                    Log.d("OpenAppViewModel", "Open app message sent to ${phoneNode.displayName}")
+                    Log.d("SignInViewModel", "Sign-in request sent to ${phoneNode.displayName}")
+                    // The UI will now wait for the broadcast from the DataLayerListenerService
                 } else {
                     _phoneAppState.value = PhoneAppState.PhoneNotFound
-                    Log.d("OpenAppViewModel", "No capable phone node found")
+                    Log.d("SignInViewModel", "No capable phone node found")
                 }
             } catch (e: Exception) {
-                Log.e("OpenAppViewModel", "Failed to send message", e)
+                Log.e("SignInViewModel", "Failed to send message", e)
                 _phoneAppState.value = PhoneAppState.PhoneNotFound
             }
         }

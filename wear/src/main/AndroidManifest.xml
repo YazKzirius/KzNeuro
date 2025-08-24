@@ -7,6 +7,7 @@
 
     <application
         android:allowBackup="true"
+        android:name=".KzNeuroApplication"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -45,11 +46,13 @@
             android:name=".DataLayerListenerService"
             android:exported="true">
             <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:host="*" android:pathPrefix="/sign-in-success" android:scheme="wear" />
+            </intent-filter>
+            <!-- Also listen for simple messages -->
+            <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data
-                    android:host="*"
-                    android:pathPrefix="/navigate_to_home"
-                    android:scheme="wear" />
+                <data android:host="*" android:pathPrefix="/sign-in-failure" android:scheme="wear" />
             </intent-filter>
         </service>
 

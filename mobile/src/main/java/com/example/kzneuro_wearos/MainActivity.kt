@@ -1,23 +1,23 @@
 package com.example.kzneuro_wearos
 
-import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.wearable.PutDataMapRequest
+import com.google.android.gms.wearable.Wearable
+import com.google.firebase.Firebase
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -26,19 +26,32 @@ class MainActivity : AppCompatActivity() {
     private lateinit var signInButton: Button
     private lateinit var loadingSpinner: ProgressBar
     private val watchViewModel: WatchViewModel by viewModels()
+    private val dataClient by lazy { Wearable.getDataClient(this) }
+    private val messageClient by lazy { Wearable.getMessageClient(this) }
 
-    // Modern way to handle activity results, replacing onActivityResult
     private val signInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         lifecycleScope.launch {
-            val signInSuccessful = authenticator.handleSignInResult(result.data)
-            if (signInSuccessful) {
-                Toast.makeText(this@MainActivity, "Sign-in successful!", Toast.LENGTH_SHORT).show()
-                navigateToHome()
-            } else {
-                // Show an error and reset the UI
-                Toast.makeText(this@MainActivity, "Sign-in failed. Please try again.", Toast.LENGTH_SHORT).show()
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.result // Throws exception on failure
+                val googleIdToken = account.idToken
+
+                if (googleIdToken != null) {
+                    // Send the correct token to the watch
+                    sendAuthSuccessToWatch(googleIdToken)
+                    // Sign in on the phone
+                    signInToFirebaseOnPhone(googleIdToken)
+                    // Navigate on the phone
+                    navigateToHome()
+                } else {
+                    sendAuthFailureToWatch()
+                    showSignInButton()
+                }
+            } catch (e: Exception) {
+                // User cancelled or there was a network error
+                sendAuthFailureToWatch()
                 showSignInButton()
             }
         }
@@ -46,29 +59,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-        //Handling click of Get Started Button
-        authenticator = FirebaseAuthenticator(this)
 
-        // Initialize views
-        signInButton = findViewById(R.id.Gsignin_btn)
+        authenticator = FirebaseAuthenticator(this)
+        signInButton = findViewById(R.id.Gsignin_btn) // Use your button ID
         loadingSpinner = findViewById(R.id.loading_spinner)
 
-        // The edge-to-edge boilerplate from your original code
-        enableEdgeToEdge()
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
-        // Handling click of the sign-in button
         signInButton.setOnClickListener {
             showLoading()
             val signInIntent = authenticator.getSignInIntent()
@@ -76,6 +72,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun signInToFirebaseOnPhone(idToken: String) {
+        try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            Firebase.auth.signInWithCredential(credential).await()
+        } catch (e: Exception) {
+            // Log error if phone sign-in fails
+        }
+    }
+
+    // ... (Your other functions: showLoading, showSignInButton, etc.)
+
+    private fun navigateToHome() {
+        val intent = Intent(this, HomeActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        watchViewModel.navigateToHomeOnWatch() // Assuming this sends a message to the watch
+        startActivity(intent)
+        finish()
+    }
+
+    private fun sendAuthSuccessToWatch(idToken: String) {
+        lifecycleScope.launch {
+            try {
+                val request = PutDataMapRequest.create("/sign-in-success").apply {
+                    dataMap.putString("id_token", idToken)
+                }
+                dataClient.putDataItem(request.asPutDataRequest().setUrgent()).await()
+            } catch (e: Exception) { /* Handle error */ }
+        }
+    }
+
+    private suspend fun sendAuthFailureToWatch() {
+        try {
+            val nodes = Wearable.getCapabilityClient(this).getCapability("wearos", 0).await().nodes // Use your actual watch capability name
+            nodes.firstOrNull()?.let { node ->
+                messageClient.sendMessage(node.id, "/sign-in-failure", null).await()
+            }
+        } catch(e: Exception) { /* Handle error */ }
+    }
     override fun onStart() {
         super.onStart()
         // If user is already signed in, go directly to HomeActivity
@@ -89,14 +124,5 @@ class MainActivity : AppCompatActivity() {
     private fun showSignInButton() {
         loadingSpinner.visibility = View.GONE
         signInButton.visibility = View.VISIBLE
-    }
-
-    private fun navigateToHome() {
-        val intent = Intent(this, HomeActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        watchViewModel.navigateToHomeOnWatch()
-        startActivity(intent)
-        finish() // Call finish to remove MainActivity from the back stack
     }
 }
